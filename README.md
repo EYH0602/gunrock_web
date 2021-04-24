@@ -315,7 +315,7 @@ and synchronizing threads: `dthread_create()`, `dthread_detach`,
 library routines, read the man pages for the pthread version of these same
 routines. To initialize your mutex and condition variables, assign them
 to the `PTHREAD_MUTEX_INITIALIZER` and `PTHREAD_COND_INITIALIZER` macros
-and you'll get initialized mutex and conidition variables.
+and you'll get initialized mutex and condition variables.
 
 ## Key files
 To make this server multithreaded, you're going to need to modify the main `gunrock.cpp` file and potentially `FileService.cpp`. You'll need to modify these files so that client requests are handled by a pool of threads with some priority logic to handle high priority files first. See the project README for more details.
