@@ -109,6 +109,12 @@ void handle_request(MySocket *client) {
   delete client;
 }
 
+void* handle_thread(void* arg) {
+  MySocket* client = (MySocket*) arg;
+  handle_request(client);
+  return NULL;
+}
+
 int main(int argc, char *argv[]) {
 
   signal(SIGPIPE, SIG_IGN);
@@ -147,11 +153,23 @@ int main(int argc, char *argv[]) {
   MySocket *client;
 
   services.push_back(new FileService(BASEDIR));
+
+  // when the server is first started
+  // the master thread creates a fixed-size pool of worker threads
+  // vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
+  // vector<MySocket*> request_buff(BUFFER_SIZE, NULL);
+  // size_t pool_idx = 0;
+  // size_t buff_idx = 0;
   
   while(true) {
     sync_print("waiting_to_accept", "");
     client = server->accept();
     sync_print("client_accepted", "");
-    handle_request(client);
+    // place the connection descriptor into a fixed-size buffer 
+    // and return to accepting more connections.
+    pthread_t pid;
+    dthread_create(&pid, NULL, handle_thread, client);
+
+
   }
 }
