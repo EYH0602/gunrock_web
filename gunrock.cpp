@@ -18,17 +18,19 @@
 #include "MySocket.h"
 #include "MyServerSocket.h"
 #include "dthread.h"
+#include "squeue.h"
 
 using namespace std;
 
 int PORT = 8080;
-int THREAD_POOL_SIZE = 1;
+int THREAD_POOL_SIZE = 20;
 int BUFFER_SIZE = 1;
 string BASEDIR = "static";
 string SCHEDALG = "FIFO";
 string LOGFILE = "/dev/null";
 
 vector<HttpService *> services;
+Node* waiting_queue;
 
 HttpService *find_service(HTTPRequest *request) {
    // find a service that is registered for this path prefix
@@ -110,8 +112,16 @@ void handle_request(MySocket *client) {
 }
 
 void* handle_thread(void* arg) {
-  MySocket* client = (MySocket*) arg;
-  handle_request(client);
+  // MySocket* client = (MySocket*) arg;
+  while (true) {
+    Node* head = dequeue(waiting_queue);
+    handle_request(head->client);
+    delete head;
+  }
+  return NULL;
+}
+
+void* create_worker(void* arg) {
   return NULL;
 }
 
@@ -156,19 +166,19 @@ int main(int argc, char *argv[]) {
 
   // when the server is first started
   // the master thread creates a fixed-size pool of worker threads
-  // vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
-  // vector<MySocket*> request_buff(BUFFER_SIZE, NULL);
-  // size_t pool_idx = 0;
-  // size_t buff_idx = 0;
-  
+  vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
+  for (int idx = 0; idx < THREAD_POOL_SIZE; idx++) {
+    dthread_create(&worker_thread_pool[idx], NULL, handle_thread, NULL);
+  }
+
   while(true) {
     sync_print("waiting_to_accept", "");
     client = server->accept();
+    cout << "here" << endl;
     sync_print("client_accepted", "");
     // place the connection descriptor into a fixed-size buffer 
     // and return to accepting more connections.
-    pthread_t pid;
-    dthread_create(&pid, NULL, handle_thread, client);
+    enqueue(waiting_queue, new Node(client));
 
 
   }
