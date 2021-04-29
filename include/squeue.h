@@ -22,7 +22,6 @@ struct Node {
 
 void enqueue(Node* queue, Node* node);
 Node* dequeue(Node* queue);
-bool is_empty(Node* queue);
 
 
 #endif

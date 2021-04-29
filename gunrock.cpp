@@ -71,7 +71,7 @@ void handle_request(MySocket *client) {
   HTTPRequest *request = new HTTPRequest(client, PORT);
   HTTPResponse *response = new HTTPResponse();
   stringstream payload;
-  
+
   // read in the request
   bool readResult = false;
   try {
@@ -167,6 +167,7 @@ int main(int argc, char *argv[]) {
   // when the server is first started
   // the master thread creates a fixed-size pool of worker threads
   vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
+  waiting_queue = NULL;
   for (int idx = 0; idx < THREAD_POOL_SIZE; idx++) {
     dthread_create(&worker_thread_pool[idx], NULL, handle_thread, NULL);
   }
@@ -174,12 +175,9 @@ int main(int argc, char *argv[]) {
   while(true) {
     sync_print("waiting_to_accept", "");
     client = server->accept();
-    cout << "here" << endl;
     sync_print("client_accepted", "");
     // place the connection descriptor into a fixed-size buffer 
     // and return to accepting more connections.
     enqueue(waiting_queue, new Node(client));
-
-
   }
 }

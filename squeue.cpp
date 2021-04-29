@@ -1,16 +1,19 @@
 #include "squeue.h"
+#include <iostream>
 
-pthread_cond_t queue_cond;
-pthread_mutex_t queue_lock;
+pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void enqueue(Node* queue, Node* node) {
   dthread_mutex_lock(&queue_lock);
 
   // find tail
-  Node* ptr;
-  for (ptr = queue; ptr->next; ptr = ptr->next);
+  Node* ptr = queue;
+  while (ptr != NULL) {
+    ptr = ptr->next;
+  }
   // add element to tail
-  ptr->next = node;
+  ptr = node;
 
   dthread_cond_signal(&queue_cond);
   dthread_mutex_unlock(&queue_lock);
@@ -18,8 +21,7 @@ void enqueue(Node* queue, Node* node) {
 
 Node* dequeue(Node* queue) {
   dthread_mutex_lock(&queue_lock);
-
-  while (is_empty(queue)) {
+  while (!queue) {
     dthread_cond_wait(&queue_cond, &queue_lock);
   }
 
@@ -30,9 +32,5 @@ Node* dequeue(Node* queue) {
 
   dthread_mutex_unlock(&queue_lock);
   return item; 
-}
-
-bool is_empty(Node* queue) {
-  return queue->next == NULL;
 }
 
