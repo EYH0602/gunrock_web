@@ -10,15 +10,15 @@
 #include <sstream>
 #include <deque>
 
-#include "HTTPRequest.h"
-#include "HTTPResponse.h"
-#include "HttpService.h"
-#include "HttpUtils.h"
-#include "FileService.h"
-#include "MySocket.h"
-#include "MyServerSocket.h"
-#include "dthread.h"
-#include "squeue.h"
+#include "include/HTTPRequest.h"
+#include "include/HTTPResponse.h"
+#include "include/HttpService.h"
+#include "include/HttpUtils.h"
+#include "include/FileService.h"
+#include "include/MySocket.h"
+#include "include/MyServerSocket.h"
+#include "include/dthread.h"
+#include "include/squeue.h"
 
 using namespace std;
 

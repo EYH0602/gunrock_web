@@ -1,4 +1,4 @@
-#include "squeue.h"
+#include "include/squeue.h"
 #include <iostream>
 
 pthread_cond_t queue_cond = PTHREAD_COND_INITIALIZER;
