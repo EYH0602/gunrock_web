@@ -1,7 +1,9 @@
 # Gunrock Web Server
 This web server is a simple server used in ECS 150 for teaching about multi-threaded programming and operating systems. This version of the server can only handle one client at a time and simply serves static files. Also, it will close each connection after reading the request and responding, but generally is still HTTP 1.1 compliant.
 
-This server was written by Sam King from UC Davis and is actively maintained by Sam as well. The `http_parse.c` file was written by [Ryan Dahl](https://github.com/ry) and is licensed under the BSD license by Ryan. This programming assignment is from the [OSTEP](http://ostep.org) textbook (tip of the hat to the authors for writing an amazing textbook).
+This server was written by [Sam King](https://github.com/kingst) from UC Davis and is actively maintained by Sam as well. The `http_parse.c` file was written by [Ryan Dahl](https://github.com/ry) and is licensed under the BSD license by Ryan. This programming assignment is from the [OSTEP](http://ostep.org) textbook (tip of the hat to the authors for writing an amazing textbook).
+
+Multi-threaded feature in this forked repo is added by [Ethan He](https://github.com/EYH0602) from UC Davis.
 
 # Quickstart
 To compile and run the server, open a terminal and execute the following commands:
@@ -177,7 +179,7 @@ that it can handle new input parameters (e.g., the number of threads to
 create).
 
 ## Part 1: Multi-threaded
- 
+
 The basic web server that we provided has a single thread of
 control. Single-threaded web servers suffer from a fundamental performance
 problem in that only a single HTTP request can be serviced at a time. Thus,
