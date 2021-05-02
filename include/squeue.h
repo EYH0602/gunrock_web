@@ -20,7 +20,7 @@ struct Node {
   }
 };
 
-void enqueue(Node* queue, Node* node);
+void enqueue(Node* queue, Node* node, int max_req);
 Node* dequeue(Node* queue);
 
 

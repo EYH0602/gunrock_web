@@ -24,7 +24,7 @@ using namespace std;
 
 int PORT = 8080;
 int THREAD_POOL_SIZE = 20;
-int BUFFER_SIZE = 1;
+int BUFFER_SIZE = 20;
 string BASEDIR = "static";
 string SCHEDALG = "FIFO";
 string LOGFILE = "/dev/null";
@@ -166,18 +166,25 @@ int main(int argc, char *argv[]) {
 
   // when the server is first started
   // the master thread creates a fixed-size pool of worker threads
-  vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
+  pthread_t thread_pool[THREAD_POOL_SIZE];
+  // vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
   waiting_queue = NULL;
   for (int idx = 0; idx < THREAD_POOL_SIZE; idx++) {
-    dthread_create(&worker_thread_pool[idx], NULL, handle_thread, NULL);
+    // cout << idx << endl;
+    dthread_create(&thread_pool[idx], NULL, handle_thread, NULL);
   }
 
+  int i = 0;
+
   while(true) {
+    // cout << "accepting" << endl;
     sync_print("waiting_to_accept", "");
     client = server->accept();
+    // cout << "accept: " << i++ << endl;
     sync_print("client_accepted", "");
     // place the connection descriptor into a fixed-size buffer 
     // and return to accepting more connections.
-    enqueue(waiting_queue, new Node(client));
+    enqueue(waiting_queue, new Node(client), BUFFER_SIZE);
+    // cout << "end this accept" << endl;
   }
 }
