@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <deque>
 
 #include "include/HTTPRequest.h"
 #include "include/HTTPResponse.h"
@@ -18,7 +17,7 @@
 #include "include/MySocket.h"
 #include "include/MyServerSocket.h"
 #include "include/dthread.h"
-#include "include/squeue.h"
+#include "include/SafeQueue.h"
 
 using namespace std;
 
@@ -30,7 +29,6 @@ string SCHEDALG = "FIFO";
 string LOGFILE = "/dev/null";
 
 vector<HttpService *> services;
-// Node* waiting_queue;
 
 HttpService *find_service(HTTPRequest *request) {
    // find a service that is registered for this path prefix
@@ -70,7 +68,6 @@ void invoke_service_method(HttpService *service, HTTPRequest *request, HTTPRespo
 void handle_request(MySocket *client) {
   HTTPRequest *request = new HTTPRequest(client, PORT);
   HTTPResponse *response = new HTTPResponse();
-  // cout << "!@#$%^&*" << endl;
   stringstream payload;
 
   // read in the request
@@ -163,6 +160,7 @@ int main(int argc, char *argv[]) {
   }
 
   set_log_file(LOGFILE);
+  set_buff_size(BUFFER_SIZE);
 
   sync_print("init", "");
   MyServerSocket *server = new MyServerSocket(PORT);
@@ -183,6 +181,6 @@ int main(int argc, char *argv[]) {
     sync_print("client_accepted", "");
     // place the connection descriptor into a fixed-size buffer 
     // and return to accepting more connections.
-    enqueue(client, BUFFER_SIZE);
+    enqueue(client);
   }
 }

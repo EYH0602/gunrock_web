@@ -1,13 +1,19 @@
-#include "include/squeue.h"
+#include "include/SafeQueue.h"
+
 #include <iostream>
+#include <deque>
+#include <vector>
 
 pthread_cond_t has_room = PTHREAD_COND_INITIALIZER;
 pthread_cond_t has_req = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
-int num_req = 0;
 
-Node* head = NULL;
-Node* tail = NULL;  // keep tail pointer for faster enqueue
+std::deque<MySocket*> waiting_queue;
+int buff_size = 1;
+
+void set_buff_size(int max_req) {
+  buff_size = max_req;
+}
 
 /**
  * Enter a new client to the waiting queue.
@@ -15,21 +21,15 @@ Node* tail = NULL;  // keep tail pointer for faster enqueue
  * keep waiting untile there is room(space).
  * Producer.
  * @param client The new request client to enqueue.
- * @param max_req The maximum allowed queue size.
  */
-void enqueue(MySocket* client, int max_req) {
+void enqueue(MySocket* client) {
   dthread_mutex_lock(&queue_lock);
 
-  while (num_req == max_req) {
+  while ((int)waiting_queue.size() >= buff_size) {
     dthread_cond_wait(&has_room, &queue_lock);
   }
 
-  Node* new_node = new Node(client, NULL);
-  if (!tail) {
-    head = new_node;
-  } 
-  tail = new_node;
-  num_req++;
+  waiting_queue.push_back(client);
 
   #ifdef _DEBUG_SHOW_STEP_
   std::cout << "enqueue!" << std::endl;
@@ -48,23 +48,14 @@ void enqueue(MySocket* client, int max_req) {
  */
 MySocket* dequeue() {
   dthread_mutex_lock(&queue_lock);
-  while (num_req == 0) {
-    dthread_cond_wait(&has_req, &queue_lock);
-  }
-
-  while (!head || num_req == 0) {
-    dthread_cond_wait(&has_req, &queue_lock);
-  }
-
-  MySocket* front = head->client;
-  Node* temp = head;
-  head = head->next;
-  if (!head) {
-    tail = NULL;
-  }
-  delete temp;
-  num_req--;
   
+  while (waiting_queue.empty()) {
+    dthread_cond_wait(&has_req, &queue_lock);
+  }
+
+  MySocket* front = waiting_queue.front();
+  waiting_queue.pop_front();
+
   #ifdef _DEBUG_SHOW_STEP_
   std::cout << "dequeue!" << std::endl;
   #endif

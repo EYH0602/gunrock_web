@@ -4,7 +4,7 @@ CC = g++
 CFLAGS = -g -Werror -Wall -I include
 LDFLAGS = -pthread
 
-OBJS = gunrock.o MyServerSocket.o MySocket.o HTTPRequest.o HTTPResponse.o http_parser.o HTTP.o HttpService.o HttpUtils.o FileService.o dthread.o squeue.o
+OBJS = gunrock.o MyServerSocket.o MySocket.o HTTPRequest.o HTTPResponse.o http_parser.o HTTP.o HttpService.o HttpUtils.o FileService.o dthread.o SafeQueue.o
 
 -include $(OBJS:.o=.d)
 
