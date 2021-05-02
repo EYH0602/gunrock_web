@@ -23,14 +23,14 @@
 using namespace std;
 
 int PORT = 8080;
-int THREAD_POOL_SIZE = 20;
-int BUFFER_SIZE = 20;
+int THREAD_POOL_SIZE = 1;
+int BUFFER_SIZE = 1;
 string BASEDIR = "static";
 string SCHEDALG = "FIFO";
 string LOGFILE = "/dev/null";
 
 vector<HttpService *> services;
-Node* waiting_queue;
+// Node* waiting_queue;
 
 HttpService *find_service(HTTPRequest *request) {
    // find a service that is registered for this path prefix
@@ -70,6 +70,7 @@ void invoke_service_method(HttpService *service, HTTPRequest *request, HTTPRespo
 void handle_request(MySocket *client) {
   HTTPRequest *request = new HTTPRequest(client, PORT);
   HTTPResponse *response = new HTTPResponse();
+  // cout << "!@#$%^&*" << endl;
   stringstream payload;
 
   // read in the request
@@ -111,17 +112,22 @@ void handle_request(MySocket *client) {
   delete client;
 }
 
+/**
+ * Helper function for handle_request.
+ * Keep a worker thread alive unless the server is shut down.
+ * @param None
+ * @return NULL
+ */
 void* handle_thread(void* arg) {
-  // MySocket* client = (MySocket*) arg;
   while (true) {
-    Node* head = dequeue(waiting_queue);
-    handle_request(head->client);
-    delete head;
+    MySocket* client = dequeue();
+    if (client) {
+      #ifdef _DEBUG_SHOW_STEP_
+      cout << "ready to handle request" << endl;
+      #endif
+      handle_request(client);
+    }
   }
-  return NULL;
-}
-
-void* create_worker(void* arg) {
   return NULL;
 }
 
@@ -167,24 +173,16 @@ int main(int argc, char *argv[]) {
   // when the server is first started
   // the master thread creates a fixed-size pool of worker threads
   pthread_t thread_pool[THREAD_POOL_SIZE];
-  // vector<pthread_t> worker_thread_pool(THREAD_POOL_SIZE, 0);
-  waiting_queue = NULL;
   for (int idx = 0; idx < THREAD_POOL_SIZE; idx++) {
-    // cout << idx << endl;
     dthread_create(&thread_pool[idx], NULL, handle_thread, NULL);
   }
 
-  int i = 0;
-
   while(true) {
-    // cout << "accepting" << endl;
     sync_print("waiting_to_accept", "");
     client = server->accept();
-    // cout << "accept: " << i++ << endl;
     sync_print("client_accepted", "");
     // place the connection descriptor into a fixed-size buffer 
     // and return to accepting more connections.
-    enqueue(waiting_queue, new Node(client), BUFFER_SIZE);
-    // cout << "end this accept" << endl;
+    enqueue(client, BUFFER_SIZE);
   }
 }

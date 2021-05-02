@@ -9,10 +9,10 @@ struct Node {
   MySocket* client;
   Node* next;
 
-  Node(MySocket* client_arg) {
-    this->client = client_arg;
-    this->next = NULL;
-  }
+  // Node(MySocket* client_arg) {
+  //   this->client = client_arg;
+  //   this->next = NULL;
+  // }
 
   Node(MySocket* client_arg, Node* next_arg) {
     this->client = client_arg;
@@ -20,8 +20,8 @@ struct Node {
   }
 };
 
-void enqueue(Node* queue, Node* node, int max_req);
-Node* dequeue(Node* queue);
+void enqueue(MySocket* client, int max_req);
+MySocket* dequeue();
 
 
 #endif
