@@ -49,6 +49,11 @@ void FileService::get(HTTPRequest *request, HTTPResponse *response) {
 }
 
 string FileService::readFile(string path) {
+  size_t index;
+  if ((index = path.find("/../")) != string::npos) {
+    path.replace(index, 4, "/");
+  }
+
   int fd = open(path.c_str(), O_RDONLY);
   if (fd < 0) {
     return "";

@@ -8,16 +8,16 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <deque>
 
-#include "HTTPRequest.h"
-#include "HTTPResponse.h"
-#include "HttpService.h"
-#include "HttpUtils.h"
-#include "FileService.h"
-#include "MySocket.h"
-#include "MyServerSocket.h"
-#include "dthread.h"
+#include "include/HTTPRequest.h"
+#include "include/HTTPResponse.h"
+#include "include/HttpService.h"
+#include "include/HttpUtils.h"
+#include "include/FileService.h"
+#include "include/MySocket.h"
+#include "include/MyServerSocket.h"
+#include "include/dthread.h"
+#include "include/SafeQueue.h"
 
 using namespace std;
 
@@ -69,7 +69,6 @@ void handle_request(MySocket *client) {
   HTTPRequest *request = new HTTPRequest(client, PORT);
   HTTPResponse *response = new HTTPResponse();
   stringstream payload;
-  
   // read in the request
   bool readResult = false;
   try {
@@ -109,6 +108,25 @@ void handle_request(MySocket *client) {
   delete client;
 }
 
+/**
+ * Helper function for handle_request.
+ * Keep a worker thread alive unless the server is shut down.
+ * @param None
+ * @return NULL
+ */
+void* handle_thread(void* arg) {
+  while (true) {
+    MySocket* client = dequeue();
+    if (client) {
+      #ifdef _DEBUG_SHOW_STEP_
+      cout << "ready to handle request" << endl;
+      #endif
+      handle_request(client);
+    }
+  }
+  return NULL;
+}
+
 int main(int argc, char *argv[]) {
 
   signal(SIGPIPE, SIG_IGN);
@@ -141,17 +159,27 @@ int main(int argc, char *argv[]) {
   }
 
   set_log_file(LOGFILE);
+  set_buff_size(BUFFER_SIZE);
 
   sync_print("init", "");
   MyServerSocket *server = new MyServerSocket(PORT);
   MySocket *client;
 
   services.push_back(new FileService(BASEDIR));
-  
+
+  // when the server is first started
+  // the master thread creates a fixed-size pool of worker threads
+  pthread_t thread_pool[THREAD_POOL_SIZE];
+  for (int idx = 0; idx < THREAD_POOL_SIZE; idx++) {
+    dthread_create(&thread_pool[idx], NULL, handle_thread, NULL);
+  }
+
   while(true) {
     sync_print("waiting_to_accept", "");
     client = server->accept();
     sync_print("client_accepted", "");
-    handle_request(client);
+    // place the connection descriptor into a fixed-size buffer 
+    // and return to accepting more connections.
+    enqueue(client);
   }
 }
