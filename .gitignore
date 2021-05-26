@@ -38,4 +38,5 @@ config.json
 # editor setting files
 .vscode
 playground
+.ccls-cache
 
