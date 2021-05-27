@@ -71,7 +71,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   Document::AllocatorType& a = document.GetAllocator();
   Value o;
   o.SetObject();
-  o.AddMember("balance", this->m_db->auth_tokens[auth_token]->balance, a);
+  o.AddMember("balance", this->m_db->users[username]->balance, a);
 
   // create an array
   Value array;
