@@ -61,7 +61,8 @@ void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
   }
 
   // parse request body
-  User *user = this->m_db->auth_tokens[auth_token];
+  string username = this->m_db->auth_tokens[auth_token]->username;
+  User *user = this->m_db->users[username];
 
   this->writeHTTPResponse(response, user);
 
@@ -90,7 +91,8 @@ void AccountService::put(HTTPRequest *request, HTTPResponse *response) {
 
   // parse request body
   StringUtils string_util;
-  User *user = this->m_db->auth_tokens[auth_token];
+  string username = this->m_db->auth_tokens[auth_token]->username;
+  User *user = this->m_db->users[username];
   vector<string> info = string_util.split(request->getBody(), '=');
   if (info[0] == "email") {
     user->email = info[1];

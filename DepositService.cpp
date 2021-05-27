@@ -60,10 +60,11 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
     }
   }
 
-  this->m_db->deposits.push_back(dp);
-  this->m_db->auth_tokens[auth_token]->balance += dp->amount;
-
   string username = this->m_db->auth_tokens[auth_token]->username;
+  this->m_db->deposits.push_back(dp);
+  this->m_db->users[username]->balance += dp->amount;
+  // this->m_db->auth_tokens[auth_token]->balance += dp->amount;
+
 
   // construct response
   Document document;

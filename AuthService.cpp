@@ -44,7 +44,6 @@ void AuthService::post(HTTPRequest *request, HTTPResponse *response) {
   // If the username doesn't exist this call will create a new user
   if (this->m_db->users.count(user->username) == 0) {
     this->m_db->users[user->username] = user;
-    this->m_db->auth_tokens[auth_token] = user;
   }
   // if the password matches, log in the user
   if (this->m_db->users[user->username]->password == user->password){
