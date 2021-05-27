@@ -27,6 +27,46 @@ AccountService::AccountService() : HttpService("/users") {
 }
 
 void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
+  // check for auth token
+  string auth_token;
+  if (request->hasAuthToken()) {
+    auth_token = request->getAuthToken();
+  } else {
+    throw ClientError::badRequest;
+  }
+
+  // checkout if auth token is in data base
+  if (this->m_db->auth_tokens.count(auth_token) == 0) {
+    throw ClientError::notFound;
+  }
+
+  // parse request body
+  User *user = this->m_db->auth_tokens[auth_token];
+
+  // example JSON API usage from doc
+  Document document;
+  Document::AllocatorType& a = document.GetAllocator();
+  Value o;
+  o.SetObject();
+  o.AddMember("balance", user->balance, a);
+  o.AddMember("email", user->email, a);
+
+  // now some rapidjson boilerplate for converting the JSON object to a string
+  document.Swap(o);
+  StringBuffer buffer;
+  PrettyWriter<StringBuffer> writer(buffer);
+  document.Accept(writer);
+
+  // set the return object
+  response->setContentType("application/json");
+  response->setBody(buffer.GetString() + string("\n"));
+
+  #ifdef _TESTING_
+  cout << "Set Email: " << endl;
+  cout << "    user id: " << user->user_id << endl;
+  cout << "    auth token: " << auth_token << endl;
+  cout << "    email: " << user->email << endl;
+  #endif
 
 }
 
