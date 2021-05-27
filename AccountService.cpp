@@ -26,23 +26,7 @@ AccountService::AccountService() : HttpService("/users") {
   
 }
 
-void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
-  // check for auth token
-  string auth_token;
-  if (request->hasAuthToken()) {
-    auth_token = request->getAuthToken();
-  } else {
-    throw ClientError::badRequest;
-  }
-
-  // checkout if auth token is in data base
-  if (this->m_db->auth_tokens.count(auth_token) == 0) {
-    throw ClientError::notFound;
-  }
-
-  // parse request body
-  User *user = this->m_db->auth_tokens[auth_token];
-
+void AccountService::writeHTTPResponse(HTTPResponse *response, User *user) {
   // example JSON API usage from doc
   Document document;
   Document::AllocatorType& a = document.GetAllocator();
@@ -60,6 +44,26 @@ void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
   // set the return object
   response->setContentType("application/json");
   response->setBody(buffer.GetString() + string("\n"));
+}
+
+void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
+  // check for auth token
+  string auth_token;
+  if (request->hasAuthToken()) {
+    auth_token = request->getAuthToken();
+  } else {
+    throw ClientError::badRequest;
+  }
+
+  // checkout if auth token is in data base
+  if (this->m_db->auth_tokens.count(auth_token) == 0) {
+    throw ClientError::notFound;
+  }
+
+  // parse request body
+  User *user = this->m_db->auth_tokens[auth_token];
+
+  this->writeHTTPResponse(response, user);
 
   #ifdef _TESTING_
   cout << "Set Email: " << endl;
@@ -92,23 +96,7 @@ void AccountService::put(HTTPRequest *request, HTTPResponse *response) {
     user->email = info[1];
   }
 
-  // example JSON API usage from doc
-  Document document;
-  Document::AllocatorType& a = document.GetAllocator();
-  Value o;
-  o.SetObject();
-  o.AddMember("balance", user->balance, a);
-  o.AddMember("email", user->email, a);
-
-  // now some rapidjson boilerplate for converting the JSON object to a string
-  document.Swap(o);
-  StringBuffer buffer;
-  PrettyWriter<StringBuffer> writer(buffer);
-  document.Accept(writer);
-
-  // set the return object
-  response->setContentType("application/json");
-  response->setBody(buffer.GetString() + string("\n"));
+  this->writeHTTPResponse(response, user);
 
   #ifdef _TESTING_
   cout << "Set Email: " << endl;
