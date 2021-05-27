@@ -48,22 +48,41 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   dp->to = this->m_db->auth_tokens[auth_token];
   dp->amount = 0;
   dp->stripe_charge_id = "";
+  string stripe_token = "";
 
   for (string info: info_list) {
     vector<string> kv = string_util.split(info, '=');
     if (kv[0] == "amount") {
       dp->amount = atoi(kv[1].c_str());
     } else if (kv[0] == "stripe_token") {
-      dp->stripe_charge_id = kv[1];
+      stripe_token = kv[1];
     } else {
       throw ClientError::badRequest;
     }
   }
 
   string username = this->m_db->auth_tokens[auth_token]->username;
+
+  // from the gunrock server to Stripe
+  HttpClient client("api.stripe.com", 443, true);
+  client.set_basic_auth(m_db->stripe_secret_key, "");
+  WwwFormEncodedDict body;
+  body.set("amount", dp->amount);
+  body.set("currency", "usd");
+  body.set("source", stripe_token);
+  string encoded_body = body.encode();
+  HTTPClientResponse *client_response = client.post("/v1/charges", encoded_body);
+
+  Document *d = client_response->jsonBody();
+  dp->stripe_charge_id = (*d)["id"].GetString();
+  delete d;
+
+  #ifdef _TESTING
+  cout << "Stripe Charge ID: " << dp->stripe_charge_id << endl;
+  #endif
+
   this->m_db->deposits.push_back(dp);
   this->m_db->users[username]->balance += dp->amount;
-  // this->m_db->auth_tokens[auth_token]->balance += dp->amount;
 
 
   // construct response
