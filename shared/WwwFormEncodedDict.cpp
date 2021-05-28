@@ -55,6 +55,10 @@ string WwwFormEncodedDict::encode() {
   return output.str();
 }
 
+string WwwFormEncodedDict::decode(string str) {
+  return this->urldecode(str);
+}
+
 string WwwFormEncodedDict::urlencode(std::string str) {
   string::iterator iterator;
   stringstream encoded;

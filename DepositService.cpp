@@ -42,6 +42,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
 
   // parse request body
   StringUtils string_util;
+  WwwFormEncodedDict decoder;
   vector<string> info_list = string_util.split(request->getBody(), '&');
 
   Deposit *dp = new Deposit();
@@ -52,16 +53,23 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
 
   for (string info: info_list) {
     vector<string> kv = string_util.split(info, '=');
-    if (kv[0] == "amount") {
-      dp->amount = atoi(kv[1].c_str());
-    } else if (kv[0] == "stripe_token") {
-      stripe_token = kv[1];
+    string key = decoder.decode(kv[0]);
+    string value = decoder.decode(kv[1]);
+    if (key == "amount") {
+      dp->amount = atoi(value.c_str());
+    } else if (key == "stripe_token") {
+      stripe_token = value;
     } else {
       throw ClientError::badRequest;
     }
   }
 
   string username = this->m_db->auth_tokens[auth_token]->username;
+
+  #ifdef _TESTING_
+  cout << "amount: " << dp->amount << endl; 
+  cout << "stripe_token: " << stripe_token << endl;
+  #endif
 
   // from the gunrock server to Stripe
   HttpClient client("api.stripe.com", 443, true);
@@ -72,6 +80,11 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   body.set("source", stripe_token);
   string encoded_body = body.encode();
   HTTPClientResponse *client_response = client.post("/v1/charges", encoded_body);
+
+  #ifdef _TESTING_
+  cout << "Stripe Status: " << client_response->status() << endl;
+  cout << "Stripe Success: " << client_response->success() << endl;
+  #endif
 
   Document *d = client_response->jsonBody();
   dp->stripe_charge_id = (*d)["id"].GetString();

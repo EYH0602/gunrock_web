@@ -93,6 +93,42 @@ int get_balance() {
   return d["balance"].GetInt();
 }
 
+int deposit(string amount, string card, string year, string month, string cvc) {
+  // API call to string to get token
+  // from the dcash wallet to Stripe
+  HttpClient *client = new HttpClient("api.stripe.com", 443, true);
+  client->set_header("Authorization", string("Bearer ") + PUBLISHABLE_KEY);
+  client->set_basic_auth(PUBLISHABLE_KEY, "");
+
+  WwwFormEncodedDict encoder;
+  encoder.set("card[number]", card.c_str());
+  encoder.set("card[exp_month]", atoi(month.c_str()));
+  encoder.set("card[exp_year]", atoi(year.c_str()));
+  encoder.set("card[cvc]", atoi(cvc.c_str()));
+  string body = encoder.encode();
+
+  HTTPClientResponse *client_response = client->post("/v1/tokens", body);
+  // This method converts the HTTP body into a rapidjson document
+  Document *d = client_response->jsonBody();
+  string token = (*d)["id"].GetString();
+  delete d;
+  delete client;
+  delete client_response;
+
+  // send amount and token to API server
+  client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
+  encoder = WwwFormEncodedDict();
+  encoder.set("stripe_token", token); 
+  encoder.set("amount", atoi(amount.c_str()));
+  body = encoder.encode();
+  client->set_header("x-auth-token", auth_token);
+  client_response = client->post("/deposits", body);
+
+  d = client_response->jsonBody();
+  assert((*d)["balance"].IsInt());
+  return (*d)["balance"].GetInt();
+}
+
 void throw_error() {
   char error_message[30] = "Error\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
@@ -112,6 +148,12 @@ int apply_function(vector<string> argv) {
       return 1;
     }
     balance = get_balance();
+  } else if (argv[0] == "deposit") {
+    if (argv.size() != 6) {
+      throw_error();
+      return 1;
+    }
+    balance = deposit(argv[1], argv[2], argv[3], argv[4], argv[5]);
   }
 
   cout << "Balance: $" << balance << ".00" << endl;
@@ -150,7 +192,7 @@ int main(int argc, char *argv[]) {
   stringstream config;
   int fd = open("config.json", O_RDONLY);
   if (fd < 0) {
-    cout << "could not open config.json" << endl;
+    cerr << "could not open config.json" << endl;
     exit(1);
   }
   int ret;
