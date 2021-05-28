@@ -76,6 +76,23 @@ int auth(string username, string password, string email) {
   return update_email(email);
 }
 
+int get_balance() {
+
+  // make a API request
+  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
+  string path = "/users/" + user_id;
+  client->set_header("x-auth-token", auth_token);
+  HTTPClientResponse *response = client->get(path);
+  string rsp = response->body();
+  delete client;
+  delete response;
+
+  Document d;
+  d.Parse(rsp);
+  assert(d["balance"].IsInt());
+  return d["balance"].GetInt();
+}
+
 void throw_error() {
   char error_message[30] = "Error\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
@@ -89,7 +106,14 @@ int apply_function(vector<string> argv) {
       return 1;
     }
     balance = auth(argv[1], argv[2], argv[3]);
+  } else if (argv[0] == "balance") {
+    if (argv.size() != 1) {
+      throw_error();
+      return 1;
+    }
+    balance = get_balance();
   }
+
   cout << "Balance: $" << balance << ".00" << endl;
   return 0;
 }
@@ -111,6 +135,9 @@ void start_cli(FILE* fp) {
 
   // read from file/STDIN line by line
   while (SHOW_PROMPT(prompt.c_str()), (len = getline(&buff, &cap, fp)) > 0) {
+    if (len == 1 && buff[len] == '\0') {
+      continue;
+    }
     buff[len-1] = '\0';
     command = string(buff);
     argv = string_util.split(command, ' ');
