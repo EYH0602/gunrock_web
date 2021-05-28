@@ -75,7 +75,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   HttpClient client("api.stripe.com", 443, true);
   client.set_basic_auth(m_db->stripe_secret_key, "");
   WwwFormEncodedDict body;
-  body.set("amount", dp->amount);
+  body.set("amount", dp->amount * 100); // API call to String is acturally in cents
   body.set("currency", "usd");
   body.set("source", stripe_token);
   string encoded_body = body.encode();
