@@ -24,6 +24,7 @@ string PUBLISHABLE_KEY = "";
 
 string auth_token;
 string user_id;
+bool is_loged_in = false;
 
 StringUtils string_util;
 
@@ -40,18 +41,30 @@ int update_email(string email) {
   response = client->put(path, body);
   string rsp = response->body();
 
+  bool success = response->success();
   delete response;
   delete client;
 
+  if (!success) {
+    throw "HTTP Client Response Failed.";
+  }
+
+
   Document d;
   d.Parse(rsp);
-  assert(d["balance"].IsInt());
+  int balance;
 
-  return d["balance"].GetInt();
+  try {
+    // assert(d["balance"].IsInt());
+    balance = d["balance"].GetInt();
+  } catch (...) {
+    throw "HTTP Client Response Failed.";
+  }
+
+  return balance;
 }
 
 int auth(string username, string password, string email) {
-
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   client->set_basic_auth(username, password);
   WwwFormEncodedDict encoder = WwwFormEncodedDict();
@@ -62,29 +75,43 @@ int auth(string username, string password, string email) {
   HTTPClientResponse *response;
   response = client->post("/auth-tokens", body);
   string rsp = response->body();
+  bool success = response->success();
   delete response;
+
+  if (!success) {
+    throw "HTTP Client Response Failed.";
+  }
 
   Document d;
   d.Parse(rsp);
   assert(d["auth_token"].IsString());
   assert(d["user_id"].IsString());
-  
   auth_token = d["auth_token"].GetString();
   user_id = d["user_id"].GetString();
+  
   delete client;
+  is_loged_in = true;
 
   return update_email(email);
 }
 
 int get_balance() {
+  if (!is_loged_in) {
+    throw "balance: No User Logged In.";
+  }
   // make a API request
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   string path = "/users/" + user_id;
   client->set_header("x-auth-token", auth_token);
   HTTPClientResponse *response = client->get(path);
   string rsp = response->body();
+  bool success = response->success();
   delete client;
   delete response;
+
+  if (!success) {
+    throw "HTTP Client Response Failed.";
+  }
 
   Document d;
   d.Parse(rsp);
@@ -93,6 +120,10 @@ int get_balance() {
 }
 
 int deposit(string amount, string card, string year, string month, string cvc) {
+  if (!is_loged_in) {
+    throw "deposit: No User Logged In.";
+  }
+
   // API call to string to get token
   // from the dcash wallet to Stripe
   HttpClient *client = new HttpClient("api.stripe.com", 443, true);
@@ -109,10 +140,16 @@ int deposit(string amount, string card, string year, string month, string cvc) {
   HTTPClientResponse *client_response = client->post("/v1/tokens", body);
   // This method converts the HTTP body into a rapidjson document
   Document *d = client_response->jsonBody();
-  string token = (*d)["id"].GetString();
-  delete d;
+  bool success = client_response->success();
   delete client;
   delete client_response;
+
+  if (!success) {
+    throw "Stripe Client Response Failed.";
+  }
+
+  string token = (*d)["id"].GetString();
+  delete d;
 
   // send amount and token to API server
   client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
@@ -122,13 +159,26 @@ int deposit(string amount, string card, string year, string month, string cvc) {
   body = encoder.encode();
   client->set_header("x-auth-token", auth_token);
   client_response = client->post("/deposits", body);
-
   d = client_response->jsonBody();
+  success = client_response->success();
+
+  delete client_response;
+
+  if (!success) {
+    throw "HTTP Client Response Failed.";
+  }
+
   assert((*d)["balance"].IsInt());
-  return (*d)["balance"].GetInt();
+
+  int balance = (*d)["balance"].GetInt();
+  delete d;
+  return balance;
 }
 
 int send(string to, string amount) {
+  if (!is_loged_in) {
+    throw "send: No User Logged In.";
+  }
   // make a API request
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
 
@@ -140,8 +190,13 @@ int send(string to, string amount) {
   client->set_header("x-auth-token", auth_token);
   HTTPClientResponse *response = client->post("/transfers", body);
   string rsp = response->body();
+  bool success = response->success();
   delete client;
   delete response;
+
+  if (!success) {
+    throw "HTTP Client Response Failed.";
+  }
 
   Document d;
   d.Parse(rsp);
@@ -150,6 +205,10 @@ int send(string to, string amount) {
 }
 
 void logout() {
+  if (!is_loged_in) {
+    exit(0);
+  }
+
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   string path = "/auth-tokens/" + user_id;
   client->set_header("x-auth-token", auth_token);
@@ -162,49 +221,47 @@ void logout() {
   exit(0);  // exit the program
 }
 
-void throw_error() {
-  char error_message[30] = "Error\n";
-  write(STDERR_FILENO, error_message, strlen(error_message));
-}
-
 int apply_function(vector<string> argv) {
   int balance = 0;
-  if (argv[0] == "auth") {
-    if (argv.size() != 4) {
-      throw_error();
-      return 1;
-    }
-    balance = auth(argv[1], argv[2], argv[3]);
-  } else if (argv[0] == "balance") {
-    if (argv.size() != 1) {
-      throw_error();
-      return 1;
-    }
-    balance = get_balance();
-  } else if (argv[0] == "deposit") {
-    if (argv.size() != 6) {
-      throw_error();
-      return 1;
-    }
-    balance = deposit(argv[1], argv[2], argv[3], argv[4], argv[5]);
-  } else if (argv[0] == "send") {
-    if (argv.size() != 3) {
-      throw_error();
-      return 1;
-    }
-    balance = send(argv[1], argv[2]);
-  } else if (argv[0] == "logout") {
-    if (argv.size() != 1) {
-      throw_error();
-      return 1;
-    }
-    logout();
-  } else {
-    throw_error();
-    return 1;
-  }
 
-  cout << "Balance: $" << balance << ".00" << endl;
+  try {
+    if (argv[0] == "auth") {
+      if (argv.size() != 4) {
+        throw "auth: Invalid argv.";
+      }
+      balance = auth(argv[1], argv[2], argv[3]);
+    } else if (argv[0] == "balance") {
+      if (argv.size() != 1) {
+        return 1;
+        throw "balance: Invalid argv.";
+      }
+      balance = get_balance();
+    } else if (argv[0] == "deposit") {
+      if (argv.size() != 6) {
+        throw "deposit: Invalid argv.";
+      }
+      balance = deposit(argv[1], argv[2], argv[3], argv[4], argv[5]);
+    } else if (argv[0] == "send") {
+      if (argv.size() != 3) {
+        throw "send: Invalid argv.";
+      }
+      balance = send(argv[1], argv[2]);
+    } else if (argv[0] == "logout") {
+      if (argv.size() != 1) {
+        throw "logout: Invalid argv.";
+      }
+      logout();
+    } else {
+      throw "Invalid Command.";
+    }
+
+    cout << "Balance: $" << balance << ".00" << endl;
+  } catch (const char* msg) {
+    cerr << msg << endl;
+    char error_message[30] = "Error\n";
+    write(STDERR_FILENO, error_message, strlen(error_message));
+  } catch (...) {}
+
   return 0;
 }
 

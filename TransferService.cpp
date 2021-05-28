@@ -61,6 +61,11 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
     }
   }
 
+  // make sure the sender have enough money
+  if (tr->from->balance < tr->amount) {
+    throw ClientError::methodNotAllowed;
+  }
+
   tr->to->balance += tr->amount;
   tr->from->balance -= tr->amount;
 
