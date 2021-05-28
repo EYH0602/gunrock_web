@@ -129,6 +129,19 @@ int deposit(string amount, string card, string year, string month, string cvc) {
   return (*d)["balance"].GetInt();
 }
 
+void logout() {
+  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
+  string path = "/auth-tokens/" + user_id;
+  client->set_header("x-auth-token", auth_token);
+  HTTPClientResponse *client_response = client->del(path);
+
+  delete client;
+  delete client_response;
+
+  // the server show returns nothing
+  exit(0);  // exit the program
+}
+
 void throw_error() {
   char error_message[30] = "Error\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
@@ -154,6 +167,12 @@ int apply_function(vector<string> argv) {
       return 1;
     }
     balance = deposit(argv[1], argv[2], argv[3], argv[4], argv[5]);
+  } else if (argv[0] == "logout") {
+    if (argv.size() != 1) {
+      throw_error();
+      return 1;
+    }
+    logout();
   }
 
   cout << "Balance: $" << balance << ".00" << endl;
