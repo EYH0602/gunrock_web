@@ -91,17 +91,20 @@ stripe_token = rsp["id"]
 kingst = Wallet(url, "kingst", "123")
 honey = Wallet(url, "honey", "123")
 
+eeeh = Wallet(url, "eeeh", "123")
 
-kingst.update_email("kingst@ucdavis.edu")
-honey.update_email("honey@ucdavis.edu")
+# kingst.update_email("kingst@ucdavis.edu")
+# honey.update_email("honey@ucdavis.edu")
 
 kingst.deposit(25000, stripe_token)
+kingst.transfer("eeeh", 12345)
 # kingst.deposit(1000, stripe_token)
 # kingst.deposit(1000, stripe_token)
 
 # print(kingst.transfer("honey", 400))
 print(kingst.get_account_info())
 print(honey.get_account_info())
+print(eeeh.get_account_info())
 
 
 # print(kingst.get_account_info())

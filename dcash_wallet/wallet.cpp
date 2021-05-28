@@ -77,7 +77,6 @@ int auth(string username, string password, string email) {
 }
 
 int get_balance() {
-
   // make a API request
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   string path = "/users/" + user_id;
@@ -129,6 +128,27 @@ int deposit(string amount, string card, string year, string month, string cvc) {
   return (*d)["balance"].GetInt();
 }
 
+int send(string to, string amount) {
+  // make a API request
+  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
+
+  WwwFormEncodedDict encoder;
+  encoder.set("to", to);
+  encoder.set("amount", atoi(amount.c_str()));
+  string body = encoder.encode();
+
+  client->set_header("x-auth-token", auth_token);
+  HTTPClientResponse *response = client->post("/transfers", body);
+  string rsp = response->body();
+  delete client;
+  delete response;
+
+  Document d;
+  d.Parse(rsp);
+  assert(d["balance"].IsInt());
+  return d["balance"].GetInt();
+}
+
 void logout() {
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   string path = "/auth-tokens/" + user_id;
@@ -167,12 +187,21 @@ int apply_function(vector<string> argv) {
       return 1;
     }
     balance = deposit(argv[1], argv[2], argv[3], argv[4], argv[5]);
+  } else if (argv[0] == "send") {
+    if (argv.size() != 3) {
+      throw_error();
+      return 1;
+    }
+    balance = send(argv[1], argv[2]);
   } else if (argv[0] == "logout") {
     if (argv.size() != 1) {
       throw_error();
       return 1;
     }
     logout();
+  } else {
+    throw_error();
+    return 1;
   }
 
   cout << "Balance: $" << balance << ".00" << endl;
