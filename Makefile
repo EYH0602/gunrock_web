@@ -1,6 +1,6 @@
 all: gunrock_web
 
-CC = g++
+CC = g++ --std=c++11
 CFLAGS = -g -Werror -Wall -I include -I shared/include -I/usr/local/opt/openssl@1.1/include
 LDFLAGS = -L/usr/local/opt/openssl@1.1/lib -lssl -lcrypto -pthread
 VPATH = shared
