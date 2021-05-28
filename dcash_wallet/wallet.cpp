@@ -76,15 +76,22 @@ int auth(string username, string password, string email) {
   return update_email(email);
 }
 
-void apply_function(vector<string> argv) {
-  int balance;
+void throw_error() {
+  char error_message[30] = "Error\n";
+  write(STDERR_FILENO, error_message, strlen(error_message));
+}
+
+int apply_function(vector<string> argv) {
+  int balance = 0;
   if (argv[0] == "auth") {
     if (argv.size() != 4) {
-      exit(1);
+      throw_error();
+      return 1;
     }
     balance = auth(argv[1], argv[2], argv[3]);
   }
   cout << "Balance: $" << balance << ".00" << endl;
+  return 0;
 }
 
 /**
@@ -94,8 +101,8 @@ void apply_function(vector<string> argv) {
 #define SHOW_PROMPT(prompt) write(STDOUT_FILENO, prompt, strlen(prompt))
 
 /* Command parser and Function caller */
-void start_cli() {
-  string prompt = "D$> ";
+void start_cli(FILE* fp) {
+  string prompt = (fp == stdin) ? "D$> " : "";
   size_t cap = 0;
   ssize_t len;
   char* buff = NULL;
@@ -103,13 +110,14 @@ void start_cli() {
   vector<string> argv;
 
   // read from file/STDIN line by line
-  while (SHOW_PROMPT(prompt.c_str()), (len = getline(&buff, &cap, stdin)) > 0) {
+  while (SHOW_PROMPT(prompt.c_str()), (len = getline(&buff, &cap, fp)) > 0) {
     buff[len-1] = '\0';
     command = string(buff);
     argv = string_util.split(command, ' ');
     apply_function(argv);
   }
 }
+
 
 int main(int argc, char *argv[]) {
   stringstream config;
@@ -129,7 +137,18 @@ int main(int argc, char *argv[]) {
   API_SERVER_HOST = d["api_server_host"].GetString();
   PUBLISHABLE_KEY = d["stripe_publishable_key"].GetString();
 
-  start_cli();
+  if (argc > 2) {
+    cerr << "Usage: ./dcash [batch file]" << endl;
+    exit(1);
+  }
+
+  FILE* fp = (argc == 1) ? stdin : fopen(argv[1], "r");
+  if (!fp) {
+    cerr << "batch file invaliad." << endl;
+    exit(1);
+  }
+
+  start_cli(fp);
 
   return 0;
 }
