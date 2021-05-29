@@ -13,6 +13,7 @@
 #include "AccountService.h"
 #include "ClientError.h"
 #include "StringUtils.h"
+#include "WwwFormEncodedDict.h"
 
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -31,9 +32,11 @@ void AccountService::writeHTTPResponse(HTTPResponse *response, User *user) {
   Document document;
   Document::AllocatorType& a = document.GetAllocator();
   Value o;
+  WwwFormEncodedDict decoder;
+
   o.SetObject();
   o.AddMember("balance", user->balance, a);
-  o.AddMember("email", user->email, a);
+  o.AddMember("email", decoder.decode(user->email), a);
 
   // now some rapidjson boilerplate for converting the JSON object to a string
   document.Swap(o);
