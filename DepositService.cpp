@@ -71,6 +71,10 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   cout << "stripe_token: " << stripe_token << endl;
   #endif
 
+  if (dp->amount < 50) {
+    throw ClientError::forbidden();
+  }
+
   // from the gunrock server to Stripe
   HttpClient client("api.stripe.com", 443, true);
   client.set_basic_auth(m_db->stripe_secret_key, "");
@@ -86,14 +90,14 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   cout << "Stripe Success: " << client_response->success() << endl;
   #endif
 
-  Document *d = client_response->jsonBody();
-  bool success = client_response->success();
-  bool error_code = client_response->status();
-  
-  delete client_response;
-  if (!success) {
+  if (!client_response->success()) {
+    delete client_response;
+    bool error_code = client_response->status();
     throw "Stripe RESPONSE " + to_string(error_code) + ".";
   }
+
+  Document *d = client_response->jsonBody();
+  delete client_response;
 
   dp->stripe_charge_id = (*d)["id"].GetString();
   delete d;
