@@ -75,7 +75,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   HttpClient client("api.stripe.com", 443, true);
   client.set_basic_auth(m_db->stripe_secret_key, "");
   WwwFormEncodedDict body;
-  body.set("amount", dp->amount * 100); // API call to String is acturally in cents
+  body.set("amount", dp->amount); // unit conversion is done on client side
   body.set("currency", "usd");
   body.set("source", stripe_token);
   string encoded_body = body.encode();
@@ -87,8 +87,18 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   #endif
 
   Document *d = client_response->jsonBody();
+  bool success = client_response->success();
+  bool error_code = client_response->status();
+  
+  delete client_response;
+  if (!success) {
+    throw "Stripe RESPONSE " + to_string(error_code) + ".";
+  }
+
   dp->stripe_charge_id = (*d)["id"].GetString();
   delete d;
+
+
 
   #ifdef _TESTING
   cout << "Stripe Charge ID: " << dp->stripe_charge_id << endl;

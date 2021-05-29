@@ -28,7 +28,31 @@ bool is_loged_in = false;
 
 StringUtils string_util;
 
-int update_email(string email) {
+int get_input_amount(string str) {
+  vector<string> amounts = string_util.split(str, '.');
+  int left = atoi(amounts[0].c_str()) * 100;
+  if (amounts.size() == 1) {
+    return left;
+  }
+  return left + atoi(amounts[1].c_str());
+}
+
+string get_output_amount(int n) {
+  string str = to_string(n);
+
+  if (n < 10) {
+    return "0.0" + str;
+  }
+  if (n < 100) {
+    return "0." + str;
+  }
+
+  string left = str.substr(0, str.length()-2);
+  string right = str.substr(str.length()-2);
+  return left + "." + right;
+}
+
+string update_email(string email) {
 
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   WwwFormEncodedDict encoder;
@@ -61,10 +85,10 @@ int update_email(string email) {
     throw "HTTP Client Response Failed.";
   }
 
-  return balance;
+  return get_output_amount(balance);
 }
 
-int auth(string username, string password, string email) {
+string auth(string username, string password, string email) {
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   client->set_basic_auth(username, password);
   WwwFormEncodedDict encoder = WwwFormEncodedDict();
@@ -95,7 +119,7 @@ int auth(string username, string password, string email) {
   return update_email(email);
 }
 
-int get_balance() {
+string get_balance() {
   if (!is_loged_in) {
     throw "balance: No User Logged In.";
   }
@@ -116,10 +140,10 @@ int get_balance() {
   Document d;
   d.Parse(rsp);
   assert(d["balance"].IsInt());
-  return d["balance"].GetInt();
+  return get_output_amount(d["balance"].GetInt());
 }
 
-int deposit(string amount, string card, string year, string month, string cvc) {
+string deposit(string amount, string card, string year, string month, string cvc) {
   if (!is_loged_in) {
     throw "deposit: No User Logged In.";
   }
@@ -155,7 +179,8 @@ int deposit(string amount, string card, string year, string month, string cvc) {
   client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   encoder = WwwFormEncodedDict();
   encoder.set("stripe_token", token); 
-  encoder.set("amount", atoi(amount.c_str()));
+  cout << get_input_amount(amount) << endl;
+  encoder.set("amount", get_input_amount(amount));
   body = encoder.encode();
   client->set_header("x-auth-token", auth_token);
   client_response = client->post("/deposits", body);
@@ -172,10 +197,10 @@ int deposit(string amount, string card, string year, string month, string cvc) {
 
   int balance = (*d)["balance"].GetInt();
   delete d;
-  return balance;
+  return get_output_amount(balance);
 }
 
-int send(string to, string amount) {
+string send(string to, string amount) {
   if (!is_loged_in) {
     throw "send: No User Logged In.";
   }
@@ -184,7 +209,7 @@ int send(string to, string amount) {
 
   WwwFormEncodedDict encoder;
   encoder.set("to", to);
-  encoder.set("amount", atoi(amount.c_str()));
+  encoder.set("amount", get_input_amount(amount));
   string body = encoder.encode();
 
   client->set_header("x-auth-token", auth_token);
@@ -201,7 +226,7 @@ int send(string to, string amount) {
   Document d;
   d.Parse(rsp);
   assert(d["balance"].IsInt());
-  return d["balance"].GetInt();
+  return get_output_amount(d["balance"].GetInt());
 }
 
 void logout() {
@@ -222,7 +247,7 @@ void logout() {
 }
 
 int apply_function(vector<string> argv) {
-  int balance = 0;
+  string balance = "";
 
   try {
     if (argv[0] == "auth") {
@@ -255,9 +280,12 @@ int apply_function(vector<string> argv) {
       throw "Invalid Command.";
     }
 
-    cout << "Balance: $" << balance << ".00" << endl;
+    string msg = "Balance: $" + balance + "\n";
+    write(STDOUT_FILENO, msg.c_str(), msg.length());
   } catch (const char* msg) {
+    #ifdef _TESTING_
     cerr << msg << endl;
+    #endif
     char error_message[30] = "Error\n";
     write(STDERR_FILENO, error_message, strlen(error_message));
   } catch (...) {}
