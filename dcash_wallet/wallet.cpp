@@ -76,20 +76,13 @@ string update_email(string email) {
 
   Document d;
   d.Parse(rsp);
-  int balance;
-
-  try {
-    // assert(d["balance"].IsInt());
-    balance = d["balance"].GetInt();
-  } catch (...) {
-    throw "HTTP Client Response Failed.";
-  }
+  assert(d["balance"].IsInt());
+  int balance = d["balance"].GetInt();
 
   return get_output_amount(balance);
 }
 
-string auth(string username, string password, string email) {
-  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
+string auth(HttpClient *client, string username, string password, string email) {
   client->set_basic_auth(username, password);
   WwwFormEncodedDict encoder = WwwFormEncodedDict();
   encoder.set("username", username); 
@@ -113,24 +106,20 @@ string auth(string username, string password, string email) {
   auth_token = d["auth_token"].GetString();
   user_id = d["user_id"].GetString();
   
-  delete client;
   is_loged_in = true;
-
   return update_email(email);
 }
 
-string get_balance() {
+string get_balance(HttpClient *client) {
   if (!is_loged_in) {
     throw "balance: No User Logged In.";
   }
   // make a API request
-  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   string path = "/users/" + user_id;
   client->set_header("x-auth-token", auth_token);
   HTTPClientResponse *response = client->get(path);
   string rsp = response->body();
   bool success = response->success();
-  delete client;
   delete response;
 
   if (!success) {
@@ -143,16 +132,16 @@ string get_balance() {
   return get_output_amount(d["balance"].GetInt());
 }
 
-string deposit(string amount, string card, string year, string month, string cvc) {
+string deposit(HttpClient *client, string amount, string card, string year, string month, string cvc) {
   if (!is_loged_in) {
     throw "deposit: No User Logged In.";
   }
 
   // API call to string to get token
   // from the dcash wallet to Stripe
-  HttpClient *client = new HttpClient("api.stripe.com", 443, true);
-  client->set_header("Authorization", string("Bearer ") + PUBLISHABLE_KEY);
-  client->set_basic_auth(PUBLISHABLE_KEY, "");
+  HttpClient *stripe_client = new HttpClient("api.stripe.com", 443, true);
+  stripe_client->set_header("Authorization", string("Bearer ") + PUBLISHABLE_KEY);
+  stripe_client->set_basic_auth(PUBLISHABLE_KEY, "");
 
   WwwFormEncodedDict encoder;
   encoder.set("card[number]", card.c_str());
@@ -161,11 +150,11 @@ string deposit(string amount, string card, string year, string month, string cvc
   encoder.set("card[cvc]", atoi(cvc.c_str()));
   string body = encoder.encode();
 
-  HTTPClientResponse *client_response = client->post("/v1/tokens", body);
+  HTTPClientResponse *client_response = stripe_client->post("/v1/tokens", body);
   // This method converts the HTTP body into a rapidjson document
   Document *d = client_response->jsonBody();
   bool success = client_response->success();
-  delete client;
+  delete stripe_client;
   delete client_response;
 
   if (!success) {
@@ -176,36 +165,31 @@ string deposit(string amount, string card, string year, string month, string cvc
   delete d;
 
   // send amount and token to API server
-  client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   encoder = WwwFormEncodedDict();
   encoder.set("stripe_token", token); 
-  cout << get_input_amount(amount) << endl;
   encoder.set("amount", get_input_amount(amount));
   body = encoder.encode();
   client->set_header("x-auth-token", auth_token);
   client_response = client->post("/deposits", body);
-  d = client_response->jsonBody();
-  success = client_response->success();
 
-  delete client_response;
-
-  if (!success) {
+  if (!client_response->success()) {
+    delete client_response;
     throw "HTTP Client Response Failed.";
   }
 
-  assert((*d)["balance"].IsInt());
+  d = client_response->jsonBody();
+  delete client_response;
 
+  assert((*d)["balance"].IsInt());
   int balance = (*d)["balance"].GetInt();
   delete d;
   return get_output_amount(balance);
 }
 
-string send(string to, string amount) {
+string send(HttpClient *client, string to, string amount) {
   if (!is_loged_in) {
     throw "send: No User Logged In.";
   }
-  // make a API request
-  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
 
   WwwFormEncodedDict encoder;
   encoder.set("to", to);
@@ -216,7 +200,6 @@ string send(string to, string amount) {
   HTTPClientResponse *response = client->post("/transfers", body);
   string rsp = response->body();
   bool success = response->success();
-  delete client;
   delete response;
 
   if (!success) {
@@ -229,17 +212,14 @@ string send(string to, string amount) {
   return get_output_amount(d["balance"].GetInt());
 }
 
-void logout() {
+void logout(HttpClient *client) {
   if (!is_loged_in) {
     exit(0);
   }
 
-  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   string path = "/auth-tokens/" + user_id;
   client->set_header("x-auth-token", auth_token);
   HTTPClientResponse *client_response = client->del(path);
-
-  delete client;
   delete client_response;
 
   // the server show returns nothing
@@ -248,34 +228,35 @@ void logout() {
 
 int apply_function(vector<string> argv) {
   string balance = "";
+  HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
 
   try {
     if (argv[0] == "auth") {
       if (argv.size() != 4) {
         throw "auth: Invalid argv.";
       }
-      balance = auth(argv[1], argv[2], argv[3]);
+      balance = auth(client, argv[1], argv[2], argv[3]);
     } else if (argv[0] == "balance") {
       if (argv.size() != 1) {
         return 1;
         throw "balance: Invalid argv.";
       }
-      balance = get_balance();
+      balance = get_balance(client);
     } else if (argv[0] == "deposit") {
       if (argv.size() != 6) {
         throw "deposit: Invalid argv.";
       }
-      balance = deposit(argv[1], argv[2], argv[3], argv[4], argv[5]);
+      balance = deposit(client, argv[1], argv[2], argv[3], argv[4], argv[5]);
     } else if (argv[0] == "send") {
       if (argv.size() != 3) {
         throw "send: Invalid argv.";
       }
-      balance = send(argv[1], argv[2]);
+      balance = send(client, argv[1], argv[2]);
     } else if (argv[0] == "logout") {
       if (argv.size() != 1) {
         throw "logout: Invalid argv.";
       }
-      logout();
+      logout(client);
     } else {
       throw "Invalid Command.";
     }
@@ -289,6 +270,8 @@ int apply_function(vector<string> argv) {
     char error_message[30] = "Error\n";
     write(STDERR_FILENO, error_message, strlen(error_message));
   } catch (...) {}
+
+  delete client;
 
   return 0;
 }
