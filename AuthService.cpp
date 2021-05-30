@@ -52,7 +52,7 @@ void AuthService::post(HTTPRequest *request, HTTPResponse *response) {
   // check if there is upper case letter in username
   for (char ch: username) {
     if (isupper(ch)) {
-      throw ClientError::forbidden;
+      throw ClientError::forbidden();
     }
   }
 
@@ -112,7 +112,7 @@ void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
   if (request->hasAuthToken()) {
     auth_token = request->getAuthToken();
   } else {
-    throw ClientError::notFound;
+    throw ClientError::notFound();
   }
 
   this->checkUserID(request);

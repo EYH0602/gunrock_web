@@ -57,7 +57,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
     } else if (key == "stripe_token") {
       stripe_token = value;
     } else {
-      throw ClientError::badRequest;
+      throw ClientError::badRequest();
     }
   }
 
