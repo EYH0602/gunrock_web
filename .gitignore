@@ -1,6 +1,7 @@
 # our main executable
 gunrock_web
 config.json
+submission.zip
 
 # Prerequisites
 *.d

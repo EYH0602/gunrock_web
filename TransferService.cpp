@@ -26,17 +26,13 @@ TransferService::TransferService() : HttpService("/transfers") { }
 
 void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
   // check for auth token
-  string auth_token;
-  if (request->hasAuthToken()) {
-    auth_token = request->getAuthToken();
-  } else {
-    throw ClientError::badRequest;
-  }
-
-  // checkout if auth token is in data base
-  if (this->m_db->auth_tokens.count(auth_token) == 0) {
-    throw ClientError::notFound;
-  }
+  User *user;
+  try {
+    user = this->getAuthenticatedUser(request);
+  } catch (ClientError &ce) {
+    throw ce;
+  } catch (...) {}
+  string auth_token = request->getAuthToken();
 
   string username = this->m_db->auth_tokens[auth_token]->username;
 
@@ -47,7 +43,7 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
   Transfer *tr = new Transfer();
 
   tr->to = NULL;
-  tr->from = this->m_db->users[username];
+  tr->from = user;
   tr->amount = 0;
 
   for (string info: info_list) {
@@ -55,15 +51,23 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
     if (kv[0] == "amount") {
       tr->amount = atoi(kv[1].c_str());
     } else if (kv[0] == "to") {
+      // check if the tr->to is in db
+      if (this->m_db->users.count(kv[1]) == 0) {
+        throw ClientError::notFound();
+      }
       tr->to = this->m_db->users[kv[1]];
     } else {
-      throw ClientError::badRequest;
+      throw ClientError::badRequest();
     }
   }
 
+  // check if tr->from has sufficient balance
+  if (tr->from->balance <= 0) {
+    throw ClientError::methodNotAllowed();
+  }
   // make sure the sender have enough money
   if (tr->from->balance < tr->amount) {
-    throw ClientError::methodNotAllowed;
+    throw ClientError::methodNotAllowed();
   }
 
   tr->to->balance += tr->amount;
