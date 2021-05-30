@@ -14,25 +14,41 @@ HttpService::HttpService(string pathPrefix) {
 }
 
 User *HttpService::getAuthenticatedUser(HTTPRequest *request)  {
-  User *auth_user = new User();
-  StringUtils string_util;
-  vector<string> info = string_util.split(request->getBody(), '&');
-
-  // setup user info
-  auth_user->balance = 0;
-  auth_user->user_id = string_util.createUserId();
-  for (string kv_str: info) {
-    vector<string> kv = string_util.split(kv_str, '=');
-    if (kv[0] == "username") {
-      auth_user->username = kv[1];
-    } else if (kv[0] == "password") {
-      auth_user->password = kv[1];
-    } else {
-      throw ClientError::badRequest();
-    }
+  // check for auth token
+  string auth_token;
+  if (request->hasAuthToken()) {
+    auth_token = request->getAuthToken();
+  } else {
+    throw ClientError::unauthorized();
   }
 
-  return auth_user;
+  // if this auth_token is not in db, throw an not found error
+  if (this->m_db->auth_tokens.count(auth_token) == 0) {
+    #ifdef _TESTING_
+    cout << "here: " << auth_token << endl;
+    this->check_db();
+    #endif
+    throw ClientError::notFound();
+  }
+
+  return this->m_db->auth_tokens[auth_token];
+}
+
+void HttpService::checkUserID(HTTPRequest *request) {
+  // check if this token belongs to the user
+  string user_id;
+  try {
+    vector<string> path = request->getPathComponents();
+    if (path.size() != 2) {
+      throw ClientError::forbidden();
+    }
+    user_id = request->getPathComponents()[1];
+  } catch (...) {
+    throw ClientError::forbidden();
+  }
+  if (user_id != this->m_db->auth_tokens[request->getAuthToken()]->user_id) {
+    throw ClientError::forbidden();
+  }
 }
 
 string HttpService::pathPrefix() {

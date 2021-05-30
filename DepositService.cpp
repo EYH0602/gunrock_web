@@ -28,17 +28,14 @@ DepositService::DepositService() : HttpService("/deposits") { }
 
 void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   // check for auth token
-  string auth_token;
-  if (request->hasAuthToken()) {
-    auth_token = request->getAuthToken();
-  } else {
-    throw ClientError::badRequest;
-  }
+  User* user;
+  try {
+    user = this->getAuthenticatedUser(request);
+  } catch (ClientError &ce) {
+    throw ce;
+  } catch (...) {}
 
-  // checkout if auth token is in data base
-  if (this->m_db->auth_tokens.count(auth_token) == 0) {
-    throw ClientError::notFound;
-  }
+  string auth_token = request->getAuthToken();
 
   // parse request body
   StringUtils string_util;
@@ -46,7 +43,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   vector<string> info_list = string_util.split(request->getBody(), '&');
 
   Deposit *dp = new Deposit();
-  dp->to = this->m_db->auth_tokens[auth_token];
+  dp->to = user;
   dp->amount = 0;
   dp->stripe_charge_id = "";
   string stripe_token = "";
@@ -63,8 +60,6 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
       throw ClientError::badRequest;
     }
   }
-
-  string username = this->m_db->auth_tokens[auth_token]->username;
 
   #ifdef _TESTING_
   cout << "amount: " << dp->amount << endl; 
@@ -92,8 +87,8 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
 
   if (!client_response->success()) {
     delete client_response;
-    bool error_code = client_response->status();
-    throw "Stripe RESPONSE " + to_string(error_code) + ".";
+    throw ClientError::badRequest();
+    // throw "Stripe RESPONSE " + to_string(error_code) + ".";
   }
 
   Document *d = client_response->jsonBody();
@@ -109,7 +104,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   #endif
 
   this->m_db->deposits.push_back(dp);
-  this->m_db->users[username]->balance += dp->amount;
+  user->balance += dp->amount;
 
 
   // construct response
@@ -117,7 +112,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   Document::AllocatorType& a = document.GetAllocator();
   Value o;
   o.SetObject();
-  o.AddMember("balance", this->m_db->users[username]->balance, a);
+  o.AddMember("balance", user->balance, a);
 
   // create an array
   Value array;
@@ -125,12 +120,12 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
 
   // add an object to our array
   for (Deposit *record: this->m_db->deposits) {
-    if (record->to->username != username) {
+    if (record->to->username != user->username) {
       continue;
     }
     Value to;
     to.SetObject();
-    to.AddMember("to", username, a);
+    to.AddMember("to", user->username, a);
     to.AddMember("amount", record->amount, a);
     to.AddMember("stripe_charge_id", record->stripe_charge_id, a);
     array.PushBack(to, a);

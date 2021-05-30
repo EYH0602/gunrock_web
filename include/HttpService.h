@@ -25,6 +25,14 @@ class HttpService {
    */
   Database *m_db;
 
+  void check_db() {
+    for (auto up: this->m_db->auth_tokens) {
+      std::cout << up.second->username << ": " << up.first << std::endl;
+    }
+  }
+
+  void checkUserID(HTTPRequest *request);
+
   /**
    * A helper function for looking up users on authenticated requests.
    *

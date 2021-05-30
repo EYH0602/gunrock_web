@@ -28,30 +28,59 @@ AuthService::AuthService() : HttpService("/auth-tokens") {
 }
 
 void AuthService::post(HTTPRequest *request, HTTPResponse *response) {
-  // parse the request body
-  User *user;
-  try {
-    user = this->getAuthenticatedUser(request);
-  } catch (ClientError &ce) {
-    response->setStatus(ce.status_code);
-  } catch (...) {
-
-  }
-
+  
+  // create the user
   StringUtils string_util;
   string auth_token;
+  string username;
+  string password;
+  vector<string> info = string_util.split(request->getBody(), '&');
 
+  // parse the request
+  // user->user_id = string_util.createUserId();
+  for (string kv_str: info) {
+    vector<string> kv = string_util.split(kv_str, '=');
+    if (kv[0] == "username") {
+      username = kv[1];
+    } else if (kv[0] == "password") {
+      password = kv[1];
+    } else {
+      throw ClientError::badRequest();
+    }
+  }
+
+  // check if there is upper case letter in username
+  for (char ch: username) {
+    if (isupper(ch)) {
+      throw ClientError::forbidden;
+    }
+  }
+
+  User *user;
   // If the username doesn't exist this call will create a new user
-  if (this->m_db->users.count(user->username) == 0) {
-    this->m_db->users[user->username] = user;
-  }
-  // if the password matches, log in the user
-  if (this->m_db->users[user->username]->password == user->password){
-    auth_token = string_util.createAuthToken();
-    this->m_db->auth_tokens[auth_token] = user;
+  if (this->m_db->users.count(username) == 0) {
+    #ifdef _TESTING_
+    cout << "Auth a new user." << endl;
+    #endif
+    user = new User();
+    user->username = username;
+    user->password = password;
+    user->balance = 0;
+    user->user_id = string_util.createUserId();
+    this->m_db->users[username] = user;
   } else {
-    throw ClientError::notFound;
+    // check if password matches
+    if (this->m_db->users[username]->password != password) {
+      throw ClientError::forbidden();
+    }
+    #ifdef _TESTING_
+    cout << "Auth a existing user." << endl;
+    #endif
+    user = this->m_db->users[username];
   }
+
+  auth_token = string_util.createAuthToken();
+  this->m_db->auth_tokens[auth_token] = user;
 
   // example JSON API usage from doc
   Document document;
@@ -85,9 +114,17 @@ void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
   } else {
     throw ClientError::notFound;
   }
+
+  this->checkUserID(request);
+
+  // cout << "OLD:" << endl;
+  // this->check_db();
   this->m_db->auth_tokens.erase(auth_token);
+  // cout << "NEW:" << endl;
+  // this->check_db();
 
   #ifdef _TESTING_
+  cout <<
   cout << "Logout: " << auth_token << endl;
   #endif
 }

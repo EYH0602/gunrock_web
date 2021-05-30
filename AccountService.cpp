@@ -51,22 +51,21 @@ void AccountService::writeHTTPResponse(HTTPResponse *response, User *user) {
 
 void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
   // check for auth token
-  string auth_token;
-  if (request->hasAuthToken()) {
-    auth_token = request->getAuthToken();
-  } else {
-    throw ClientError::badRequest;
-  }
+  User* user;
+  try {
+    user = this->getAuthenticatedUser(request);
+  } catch (ClientError &ce) {
+    throw ce;
+  } catch (...) {}
+  string auth_token = request->getAuthToken();
 
-  // checkout if auth token is in data base
-  if (this->m_db->auth_tokens.count(auth_token) == 0) {
-    throw ClientError::notFound;
+  if (request->getPathComponents().size() != 2) {
+    throw ClientError::badRequest();
   }
+  this->checkUserID(request);
 
   // parse request body
   string username = this->m_db->auth_tokens[auth_token]->username;
-  User *user = this->m_db->users[username];
-
   this->writeHTTPResponse(response, user);
 
   #ifdef _TESTING_
@@ -80,26 +79,28 @@ void AccountService::get(HTTPRequest *request, HTTPResponse *response) {
 
 void AccountService::put(HTTPRequest *request, HTTPResponse *response) {
   // check for auth token
-  string auth_token;
-  if (request->hasAuthToken()) {
-    auth_token = request->getAuthToken();
-  } else {
-    throw ClientError::badRequest;
-  }
+  User* user;
+  try {
+    user = this->getAuthenticatedUser(request);
+  } catch (ClientError &ce) {
+    throw ce;
+  } catch (...) {}
+  string auth_token = request->getAuthToken();
+  this->checkUserID(request);
 
-  // checkout if auth token is in data base
-  if (this->m_db->auth_tokens.count(auth_token) == 0) {
-    throw ClientError::notFound;
+  // try the get the parameter email string
+  string email;
+  try {
+    StringUtils string_util;
+    vector<string> info = string_util.split(request->getBody(), '=');
+    if (info.size() != 2 || info[0] != "email") {
+      throw ClientError::badRequest();
+    }
+    email = info[1];
+  } catch (...) {
+    throw ClientError::badRequest();
   }
-
-  // parse request body
-  StringUtils string_util;
-  string username = this->m_db->auth_tokens[auth_token]->username;
-  User *user = this->m_db->users[username];
-  vector<string> info = string_util.split(request->getBody(), '=');
-  if (info[0] == "email") {
-    user->email = info[1];
-  }
+  user->email = email;
 
   this->writeHTTPResponse(response, user);
 
