@@ -123,13 +123,15 @@ void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
   if (this->m_db->auth_tokens.count(target_auth_token) == 0) {
     throw ClientError::notFound();
   }
+  if (this->m_db->auth_tokens[my_auth_token]->user_id 
+      != this->m_db->auth_tokens[target_auth_token]->user_id) {
+    throw ClientError::forbidden();
+  }
 
   // cout << "OLD:" << endl;
   // this->check_db();
-  this->m_db->auth_tokens.erase(my_auth_token);
-  if (my_auth_token != target_auth_token) {
-    this->m_db->auth_tokens.erase(target_auth_token);
-  }
+  // this->m_db->auth_tokens.erase(my_auth_token);
+  this->m_db->auth_tokens.erase(target_auth_token);
   // cout << "NEW:" << endl;
   // this->check_db();
 
