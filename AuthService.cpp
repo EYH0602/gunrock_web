@@ -108,23 +108,32 @@ void AuthService::post(HTTPRequest *request, HTTPResponse *response) {
 }
 
 void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
-  string auth_token;
+  string my_auth_token;
   if (request->hasAuthToken()) {
-    auth_token = request->getAuthToken();
+    my_auth_token = request->getAuthToken();
   } else {
     throw ClientError::notFound();
   }
 
-  this->checkUserID(request);
+  vector<string> path = request->getPathComponents();
+  if (path.size() != 2) {
+    throw ClientError::badRequest();
+  }
+  string target_auth_token = path[1];
+  if (this->m_db->auth_tokens.count(target_auth_token) == 0) {
+    throw ClientError::notFound();
+  }
 
   // cout << "OLD:" << endl;
   // this->check_db();
-  this->m_db->auth_tokens.erase(auth_token);
+  this->m_db->auth_tokens.erase(my_auth_token);
+  if (my_auth_token != target_auth_token) {
+    this->m_db->auth_tokens.erase(target_auth_token);
+  }
   // cout << "NEW:" << endl;
   // this->check_db();
 
   #ifdef _TESTING_
-  cout <<
   cout << "Logout: " << auth_token << endl;
   #endif
 }
