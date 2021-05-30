@@ -34,7 +34,12 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
   } catch (...) {}
   string auth_token = request->getAuthToken();
 
-  string username = this->m_db->auth_tokens[auth_token]->username;
+  // check if tr->from has sufficient balance
+  if (user->balance <= 0) {
+    throw ClientError::methodNotAllowed();
+  }
+
+  string username = user->username;
 
   // parse request body
   StringUtils string_util;
@@ -49,7 +54,12 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
   for (string info: info_list) {
     vector<string> kv = string_util.split(info, '=');
     if (kv[0] == "amount") {
-      tr->amount = atoi(kv[1].c_str());
+      int amount = atoi(kv[1].c_str());
+      // make sure the sender have enough money
+      if (tr->from->balance < amount) {
+        throw ClientError::badRequest();
+      }
+      tr->amount = amount;
     } else if (kv[0] == "to") {
       // check if the tr->to is in db
       if (this->m_db->users.count(kv[1]) == 0) {
@@ -59,15 +69,6 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
     } else {
       throw ClientError::badRequest();
     }
-  }
-
-  // check if tr->from has sufficient balance
-  if (tr->from->balance <= 0) {
-    throw ClientError::methodNotAllowed();
-  }
-  // make sure the sender have enough money
-  if (tr->from->balance < tr->amount) {
-    throw ClientError::methodNotAllowed();
   }
 
   tr->to->balance += tr->amount;
@@ -81,7 +82,7 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
   Document::AllocatorType& a = document.GetAllocator();
   Value o;
   o.SetObject();
-  o.AddMember("balance", this->m_db->users[username]->balance, a);
+  o.AddMember("balance", user->balance, a);
 
   // create an array
   Value array;
