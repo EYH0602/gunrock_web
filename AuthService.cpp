@@ -66,8 +66,10 @@ void AuthService::post(HTTPRequest *request, HTTPResponse *response) {
     user->username = username;
     user->password = password;
     user->balance = 0;
+    user->email = "";
     user->user_id = string_util.createUserId();
     this->m_db->users[username] = user;
+    response->setStatus(201);
   } else {
     // check if password matches
     if (this->m_db->users[username]->password != password) {
