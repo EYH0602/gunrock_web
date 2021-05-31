@@ -294,6 +294,8 @@ void start_cli(FILE* fp) {
   // read from file/STDIN line by line
   while (SHOW_PROMPT(prompt.c_str()), (len = getline(&buff, &cap, fp)) > 0) {
     if (len == 1 && buff[len] == '\0') {
+      char error_message[30] = "Error\n";
+      write(STDERR_FILENO, error_message, strlen(error_message));
       continue;
     }
     buff[len-1] = '\0';

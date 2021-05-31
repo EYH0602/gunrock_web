@@ -128,12 +128,7 @@ void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
     throw ClientError::forbidden();
   }
 
-  // cout << "OLD:" << endl;
-  // this->check_db();
-  // this->m_db->auth_tokens.erase(my_auth_token);
   this->m_db->auth_tokens.erase(target_auth_token);
-  // cout << "NEW:" << endl;
-  // this->check_db();
 
   #ifdef _TESTING_
   cout << "Logout: " << auth_token << endl;
