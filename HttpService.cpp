@@ -24,10 +24,6 @@ User *HttpService::getAuthenticatedUser(HTTPRequest *request)  {
 
   // if this auth_token is not in db, throw an not found error
   if (this->m_db->auth_tokens.count(auth_token) == 0) {
-    #ifdef _TESTING_
-    cout << "here: " << auth_token << endl;
-    this->check_db();
-    #endif
     throw ClientError::notFound();
   }
 
