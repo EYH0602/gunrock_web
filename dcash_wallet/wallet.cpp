@@ -28,6 +28,11 @@ bool is_loged_in = false;
 
 StringUtils string_util;
 
+/**
+ * Convert a input amount from string to int.
+ * @param str The amount as string with unit of dollar.
+ * @return Amount as integer with unit of cents.
+ */
 int get_input_amount(string str) {
   vector<string> amounts = string_util.split(str, '.');
   int left = atoi(amounts[0].c_str()) * 100;
@@ -37,6 +42,12 @@ int get_input_amount(string str) {
   return left + atoi(amounts[1].c_str());
 }
 
+/**
+ * @brief Convert a output amount from int to string.
+ * 
+ * @param n Amount as integer in cents
+ * @return string amount in dollar with 2 digits.
+ */
 string get_output_amount(int n) {
   string str = to_string(n);
 
@@ -52,8 +63,15 @@ string get_output_amount(int n) {
   return left + "." + right;
 }
 
+/**
+ * @brief Update current user's email in server.
+ * 
+ * @param email The new email of current user.
+ * @return string the user's current balance. 
+ */
 string update_email(string email) {
-
+  // since one client cannot handle two requests,
+  // create a new client to do the email API call
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
   WwwFormEncodedDict encoder;
 
@@ -82,6 +100,17 @@ string update_email(string email) {
   return get_output_amount(balance);
 }
 
+/**
+ * @brief Authenticated a user.
+ * If the username doesn't exist this call will create a new user, 
+ * and if it does exist then it logs in the user if the password matches.
+ * 
+ * @param client Http client to the API server.
+ * @param username The user's username.
+ * @param password The user's password.
+ * @param email The user's email.
+ * @return string The user's current balance.
+ */
 string auth(HttpClient *client, string username, string password, string email) {
   client->set_basic_auth(username, password);
   WwwFormEncodedDict encoder = WwwFormEncodedDict();
@@ -110,6 +139,12 @@ string auth(HttpClient *client, string username, string password, string email) 
   return update_email(email);
 }
 
+/**
+ * @brief Get the balance of the current user.
+ * 
+ * @param client Http client to the API server.
+ * @return string The user's current balance.
+ */
 string get_balance(HttpClient *client) {
   if (!is_loged_in) {
     throw "balance: No User Logged In.";
@@ -132,6 +167,17 @@ string get_balance(HttpClient *client) {
   return get_output_amount(d["balance"].GetInt());
 }
 
+/**
+ * @brief Deposit to currentDeposit to current user account from a credit card.
+ * 
+ * @param client Http client to the API server.
+ * @param amount Amount that user want to deposit to his account.
+ * @param card Card number of the card to charge money.
+ * @param year Last year of use.
+ * @param month Last mounth of use. 
+ * @param cvc cvc on the back of the card.
+ * @return string The user's current balance.
+ */
 string deposit(HttpClient *client, string amount, string card, string year, string month, string cvc) {
   if (!is_loged_in) {
     throw "deposit: No User Logged In.";
@@ -186,6 +232,14 @@ string deposit(HttpClient *client, string amount, string card, string year, stri
   return get_output_amount(balance);
 }
 
+/**
+ * @brief Send money from the current loged in user to another user in database.
+ * 
+ * @param client Http client to the API server.
+ * @param to The recieptor's user name.
+ * @param amount The amount to be sent.
+ * @return string The user's current balance.
+ */
 string send(HttpClient *client, string to, string amount) {
   if (!is_loged_in) {
     throw "send: No User Logged In.";
@@ -212,6 +266,11 @@ string send(HttpClient *client, string to, string amount) {
   return get_output_amount(d["balance"].GetInt());
 }
 
+/**
+ * @brief logout the current user.
+ * 
+ * @param client Http client to the API server.
+ */
 void logout(HttpClient *client) {
   if (!is_loged_in) {
     exit(0);
@@ -226,6 +285,13 @@ void logout(HttpClient *client) {
   exit(0);  // exit the program
 }
 
+/**
+ * @brief function caller. call functions according to argv.
+ * 
+ * @param argv command line argument vector.
+ * @return int 0 if success.
+ * @exception string with function (argv[0]) name.
+ */
 int apply_function(vector<string> argv) {
   string balance = "";
   HttpClient *client = new HttpClient(API_SERVER_HOST.c_str(), API_SERVER_PORT);
@@ -282,7 +348,12 @@ int apply_function(vector<string> argv) {
  */
 #define SHOW_PROMPT(prompt) write(STDOUT_FILENO, prompt, strlen(prompt))
 
-/* Command parser and Function caller */
+/**
+ * @brief start the command environment of dcash client.
+ * 
+ * @param fp the file to read from 
+ * (stdin for interactive mode, other for batch mode).
+ */
 void start_cli(FILE* fp) {
   string prompt = (fp == stdin) ? "D$> " : "";
   size_t cap = 0;
