@@ -133,6 +133,6 @@ void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
   this->m_db->auth_tokens.erase(target_auth_token);
 
   #ifdef _TESTING_
-  cout << "Logout: " << auth_token << endl;
+  cout << "Logout: " << target_auth_token << endl;
   #endif
 }
