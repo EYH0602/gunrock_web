@@ -14,6 +14,18 @@ class AccountService : public HttpService {
   virtual void put(HTTPRequest *request, HTTPResponse *response);
 
  private:
+
+ /**
+  * @brief Write info of a user to HTTP response in Account service standard.
+  * Account Service Standard Response Body:
+  * {
+  *   "balance": <int>,
+  *   "email": <str>
+  * }
+  * 
+  * @param response HTTP Response object to write in.
+  * @param user  User object providing info.
+  */
   void writeHTTPResponse(HTTPResponse *response, User *user); 
 };
 

@@ -66,6 +66,7 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   cout << "stripe_token: " << stripe_token << endl;
   #endif
 
+  // string forbidden amount less than 50 cents
   if (dp->amount < 50) {
     throw ClientError::forbidden();
   }
@@ -88,24 +89,20 @@ void DepositService::post(HTTPRequest *request, HTTPResponse *response) {
   if (!client_response->success()) {
     delete client_response;
     throw ClientError::badRequest();
-    // throw "Stripe RESPONSE " + to_string(error_code) + ".";
   }
 
   Document *d = client_response->jsonBody();
-  delete client_response;
-
   dp->stripe_charge_id = (*d)["id"].GetString();
+  delete client_response;
   delete d;
 
 
-
-  #ifdef _TESTING
+  #ifdef _TESTING_
   cout << "Stripe Charge ID: " << dp->stripe_charge_id << endl;
   #endif
 
   this->m_db->deposits.push_back(dp);
   user->balance += dp->amount;
-
 
   // construct response
   Document document;

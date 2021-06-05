@@ -110,6 +110,7 @@ void AuthService::post(HTTPRequest *request, HTTPResponse *response) {
 }
 
 void AuthService::del(HTTPRequest *request, HTTPResponse *response) {
+  // varify user
   string my_auth_token;
   if (request->hasAuthToken()) {
     my_auth_token = request->getAuthToken();

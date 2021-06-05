@@ -45,8 +45,8 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
   StringUtils string_util;
   vector<string> info_list = string_util.split(request->getBody(), '&');
 
+  // init a Transfer object for use
   Transfer *tr = new Transfer();
-
   tr->to = NULL;
   tr->from = user;
   tr->amount = 0;
@@ -71,10 +71,11 @@ void TransferService::post(HTTPRequest *request, HTTPResponse *response) {
     }
   }
 
+  // make change in balance for both account (by refence)
   tr->to->balance += tr->amount;
   tr->from->balance -= tr->amount;
 
-  // save to db
+  // save transfer record to db
   this->m_db->transfers.push_back(tr);
 
   // construct response
