@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <mysql/mysql.h>
 
 class User {
  public:
@@ -43,6 +44,8 @@ class Database {
 
   // set by config.json
   std::string stripe_secret_key;
+ private:
+  // 
 };
 
 #endif
