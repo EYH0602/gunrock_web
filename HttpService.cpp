@@ -5,6 +5,7 @@
 
 #include "HttpService.h"
 #include "ClientError.h"
+#include "StringUtils.h"
 
 using namespace std;
 
@@ -13,8 +14,37 @@ HttpService::HttpService(string pathPrefix) {
 }
 
 User *HttpService::getAuthenticatedUser(HTTPRequest *request)  {
-  // TODO: implement this function
-  return NULL;
+  // check for auth token
+  string auth_token;
+  if (request->hasAuthToken()) {
+    auth_token = request->getAuthToken();
+  } else {
+    throw ClientError::unauthorized();
+  }
+
+  // if this auth_token is not in db, throw an not found error
+  if (this->m_db->auth_tokens.count(auth_token) == 0) {
+    throw ClientError::notFound();
+  }
+
+  return this->m_db->auth_tokens[auth_token];
+}
+
+void HttpService::checkUserID(HTTPRequest *request) {
+  // check if this token belongs to the user
+  string user_id;
+  try {
+    vector<string> path = request->getPathComponents();
+    if (path.size() != 2) {
+      throw ClientError::forbidden();
+    }
+    user_id = request->getPathComponents()[1];
+  } catch (...) {
+    throw ClientError::forbidden();
+  }
+  if (user_id != this->m_db->auth_tokens[request->getAuthToken()]->user_id) {
+    throw ClientError::forbidden();
+  }
 }
 
 string HttpService::pathPrefix() {

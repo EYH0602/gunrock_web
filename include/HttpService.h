@@ -38,6 +38,14 @@ class HttpService {
    */
   User *getAuthenticatedUser(HTTPRequest *request);
   
+  /**
+   * @brief Check the user id in URL is the same as loged in user.
+   * 
+   * @param request the HTTPRequest object that may caontain auth info
+   * @return None.
+   * @throw ClientError for any cases where user id is not the same
+   */
+  void checkUserID(HTTPRequest *request);
  private:
   std::string m_pathPrefix;
 };

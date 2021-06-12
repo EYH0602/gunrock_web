@@ -1,6 +1,7 @@
 # our main executable
 gunrock_web
 config.json
+submission.zip
 
 # Prerequisites
 *.d
@@ -38,4 +39,5 @@ config.json
 # editor setting files
 .vscode
 playground
+.ccls-cache
 

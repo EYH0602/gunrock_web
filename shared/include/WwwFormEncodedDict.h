@@ -15,6 +15,7 @@ class WwwFormEncodedDict {
   void set(std::string key, int value);
   
   std::string encode();
+  std::string decode(std::string str);
 
  protected:
   std::string urlencode(std::string str);
