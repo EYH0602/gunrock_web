@@ -141,7 +141,7 @@ Updates the information for a user.
 
 #### Arguments
 
-| Argumemt | Description                    |
+| Argument | Description                    |
 | ---------|--------------------------------|
 | email    | The email address for the user |
 

@@ -24,7 +24,7 @@ this file and set a few variable.
 From an architectural perspective, the `gunrock` server enables you
 establish routes and handlers for these routes. Routes are HTTP path
 prefixes, that when a request matches, invokes the service that
-registered with that prefix. Services inhert from the base
+registered with that prefix. Services inherit from the base
 `HttpService` and implement whichever HTTP methods they need to handle
 (e.g., GET or PUT) to implement that functionality. Our goal with
 `gunrock` is to make handling API calls as easy as implementing a
@@ -82,7 +82,7 @@ accesses an authenticated method without including an `auth_token` for
 authentication) you signify to `gunrock` that there was an error by
 throwing one of the `ClientError.h` exceptions. The `gunrock`
 framework will catch these exceptions and craft the return object
-appripriately to convey the error to the client that invoked the API
+appropriately to convey the error to the client that invoked the API
 call.
 
 ```c++

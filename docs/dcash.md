@@ -20,7 +20,7 @@ Server code runs in server systems that the app designers _do_ have
 control over. For modern apps, this server infrastructure typically
 comes in the form of cloud computing, and the app designers can run
 their software in the cloud with higher assurance that the
-hardware/software stack supporing their software can be
+hardware/software stack supporting their software can be
 trusted. Therefore, app designers use servers to handle sensitive
 computation, like storing the full database of users or any financial
 transactions are managed by server software.

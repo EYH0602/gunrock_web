@@ -9,7 +9,7 @@ of five commands:
 
 - [balance](#the-balance-command) Shows the current user's balance
 
-- [deposit](#the-deposit-command) Desposits money into the current
+- [deposit](#the-deposit-command) Deposits money into the current
   user's account
 
 - [send](#the-send-command) Sends money to another user
@@ -20,7 +20,7 @@ of five commands:
 Conceptually, you should view the wallet application as a thin UI layer for
 the API server. The only state that wallet needs to store across commands
 is the `auth_token` and the `user_id` that the `/auth-tokens` endpoint
-returns after a successfull authentication. Other than that, all data should
+returns after a successful authentication. Other than that, all data should
 be fetched from the server.
 
 ## Invoking the dcash program
