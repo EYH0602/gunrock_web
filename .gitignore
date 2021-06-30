@@ -40,4 +40,5 @@ submission.zip
 .vscode
 playground
 .ccls-cache
+.DS_store
 
